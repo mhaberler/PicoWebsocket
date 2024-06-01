@@ -3,10 +3,10 @@
 #include <Arduino.h>
 #include <base64.h>
 
-#if defined(ESP32)
+#if defined(ESP32) // && defined(USE_BUILTIN_SHA1)
 #include <mbedtls/sha1.h>
 #else
-#include <Hash.h>
+#include "sha1/sha1.h"
 #endif
 
 #include "PicoWebsocket.h"
@@ -19,10 +19,30 @@
 
 namespace {
 
-#if defined(ESP32)
+#if defined(ESP32) //  && defined(USE_BUILTIN_SHA1)
 // ESP32 doesn't have an Arduino sha1 function built-in, implement it with mbedtls
 void sha1(const String & text, uint8_t * hash) {
-    mbedtls_sha1_ret((const unsigned char *) text.c_str(), text.length(), hash);
+    // mbedtls_sha1_ret((const unsigned char *) text.c_str(), text.length(), hash);
+    //  (String&)key += WS_STR_UUID;
+  mbedtls_sha1_context ctx;
+
+
+  mbedtls_sha1_init(&ctx);
+  mbedtls_sha1_starts(&ctx);
+  mbedtls_sha1_update(&ctx, (const unsigned char*)text.c_str(), text.length());
+  mbedtls_sha1_finish(&ctx, hash);
+  mbedtls_sha1_free(&ctx);
+}
+#else
+void sha1(const String & text, uint8_t * hash) {
+    SHA1_CTX ctx;
+
+        SHA1Init(&ctx);
+    SHA1Update(&ctx, (const uint8_t*)text.c_str(), text.length());
+    SHA1Final(hash, &ctx);
+    //  Sha1.init();
+    // mbedtls_sha1_ret((const unsigned char *) text.c_str(), text.length(), hash);
+    sha1(text, hash);
 }
 #endif
 
